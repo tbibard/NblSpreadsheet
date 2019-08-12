@@ -1,6 +1,4 @@
 /vendor/
+/input/
 .idea/*
 .env
-estim-pop-nreg-sexe-gca-1975-2019.xls
-region2019-csv.zip
-region2019.csv
