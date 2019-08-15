@@ -80,50 +80,69 @@ class ImportPopulationCommand extends Command
         // starts and displays the progress bar
         $progressBar->start();
 
-        // Create a connection to database
-        $dbh = new \PDO($_ENV['DB_DSN'], $_ENV['DB_USER'], $_ENV['DB_PASS']);
-        // Prepare sql insert query
-        $sql = 'INSERT INTO '.$table.' (region, annee, sexe, age, population)
-            VALUES (?, ?, ?, ?, ?)';
-        $sth = $dbh->prepare($sql);
+        try {
+            // Create a connection to database
+            $dbh = new \PDO($_ENV['DB_DSN'], $_ENV['DB_USER'], $_ENV['DB_PASS']);
+            $dbh->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
 
-        // Retrieve all sheet names (sheet name are equal to year, omit the first)
-        $sheetNames = $spreadsheet->getSheetNames();
-        foreach ($sheetNames as $year) {
-            if ($year == 'À savoir') continue;
-            
-            $progressBar->setMessage('Importation année: '.$year);
-            $sheet = $spreadsheet->getSheetByName($year);
+            // Prepare sql insert query
+            $sql = 'INSERT INTO '.$table.' (region, annee, sexe, age, population)
+                VALUES (?, ?, ?, ?, ?)';
+            $sth = $dbh->prepare($sql);
 
-            // Iterate row on regions
-            foreach ($fileDescriptor['zones'] as $regionRow => $regionInsee) {
-                // Iterate column for men (2) /age
-                foreach ($fileDescriptor['homme'] as $menColumn => $menAge) {
-
-                    $sth->execute([
-                        $regionInsee,
-                        $year,
-                        2,
-                        $menAge,
-                        $sheet->getCell($menColumn.$regionRow),
-                    ]);
-                }
+            // Retrieve all sheet names (sheet name are equal to year, omit the first)
+            $sheetNames = $spreadsheet->getSheetNames();
+            foreach ($sheetNames as $year) {
+                if ($year == 'À savoir') continue;
                 
-                // Iterate column for women (1) /age
-                foreach ($fileDescriptor['femme'] as $womenColumn => $womenAge) {
+                $progressBar->setMessage('Importation année: '.$year);
+                $sheet = $spreadsheet->getSheetByName($year);
 
-                    $sth->execute([
-                        $regionInsee,
-                        $year,
-                        1,
-                        $womenAge,
-                        $sheet->getCell($womenColumn.$regionRow),
-                    ]);
+                // Manage format xls
+                // 
+                if ($input->getArgument('type') == 'regionale' and $input->getOption('age') == 'quinquennal' and $year == 1998) {
+                    $fileDescriptor['zones'] = [
+                        '6' => '84', '7' => '27', '8' => '53', '9' => '24', '10' => '94', '11' => '44',
+                        '12' => '32', '13' => '11', '14' => '28', '15' => '75', '16' => '76', '17' => '52',
+                        '18' => '93', '23' => '01', '24' => '02', '25' => '03', '26' => '04'
+                    ];
                 }
-            }
 
-            // advances the progress bar 1 unit
-            $progressBar->advance();
+                // Iterate row on regions
+                foreach ($fileDescriptor['zones'] as $regionRow => $regionInsee) {
+                    if ($input->getArgument('type') == 'regionale' and $year <= 2013 and $year > 1998 and $regionRow == 24) continue; // Mayotte présent à partir de 2014 (warning bug file regionale/classe année 1998 format !!!)
+                    if ($input->getArgument('type') == 'departementale' and $year <= 2013 and $regionRow == 107) continue; // Mayotte présent à partir de 2014
+                    if ($input->getArgument('type') == 'regionale' and $year < 1990 and $regionRow > 18) continue; // Pas de data pour les DOM avant 1990
+                    if ($input->getArgument('type') == 'departementale' and $year < 1990 and $regionRow > 101) continue; // Pas de data pour les DOM avant 1990
+
+                    // Iterate column for men (2) /age
+                    foreach ($fileDescriptor['homme'] as $menColumn => $menAge) {
+                        $sth->execute([
+                            $regionInsee,
+                            $year,
+                            2,
+                            $menAge,
+                            intval($sheet->getCell($menColumn.$regionRow)->getValue()),
+                        ]);
+                    }
+                    
+                    // Iterate column for women (1) /age
+                    foreach ($fileDescriptor['femme'] as $womenColumn => $womenAge) {
+                        $sth->execute([
+                            $regionInsee,
+                            $year,
+                            1,
+                            $womenAge,
+                            intval($sheet->getCell($womenColumn.$regionRow)->getValue()),
+                        ]);
+                    }
+                }
+
+                // advances the progress bar 1 unit
+                $progressBar->advance();
+            }
+        } catch (\PDOException $e) {
+            $output->writeln('<error>PDO : '.$e->getMessage().'</error>');
         } 
 
         // ensures that the progress bar is at 100%
