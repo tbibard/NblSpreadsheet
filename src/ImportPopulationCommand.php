@@ -108,10 +108,30 @@ class ImportPopulationCommand extends Command
                     ];
                 }
 
+                if ($input->getArgument('type') == 'departementale' and $input->getOption('age') == 'quinquennal' and $year == 1998) {
+                    $fileDescriptor['zones'] = [
+                        '6' => '01', '7' => '02', '8' => '03', '9' => '04', '10' => '05', '11' => '06', '12' => '07',
+                        '13' => '08', '14' => '09', '15' => '10', '16' => '11', '17' => '12', '18' => '13', '19' => '14',
+                        '20' => '15', '21' => '16', '22' => '17', '23' => '18', '24' => '19', '25' => '2A', '26' => '2B',
+                        '27' => '21', '28' => '22', '29' => '23', '30' => '24', '31' => '25', '32' => '26', '33' => '27',
+                        '34' => '28', '35' => '29', '36' => '30', '37' => '31', '38' => '32', '39' => '33', '40' => '34',
+                        '41' => '35', '42' => '36', '43' => '37', '44' => '38', '45' => '39', '46' => '40', '47' => '41',
+                        '48' => '42', '49' => '43', '50' => '44', '51' => '45', '52' => '46', '53' => '47', '54' => '48',
+                        '55' => '49', '56' => '50', '57' => '51', '58' => '52', '59' => '53', '60' => '54', '61' => '55',
+                        '62' => '56', '63' => '57', '64' => '58', '65' => '59', '66' => '60', '67' => '61', '68' => '62',
+                        '69' => '63', '70' => '64', '71' => '65', '72' => '66', '73' => '67', '74' => '68', '75' => '69',
+                        '76' => '70', '77' => '71', '78' => '72', '79' => '73', '80' => '74', '81' => '75', '82' => '76',
+                        '83' => '77', '84' => '78', '85' => '79', '86' => '80', '87' => '81', '88' => '82', '89' => '83',
+                        '90' => '84', '91' => '85', '92' => '86', '93' => '87', '94' => '88', '95' => '89', '96' => '90',
+                        '97' => '91', '98' => '92', '99' => '93', '100' => '94', '101' => '95', '106' => '971', '107' => '972',
+                        '108' => '973', '109' => '974'
+                    ];
+                }
+
                 // Iterate row on regions
                 foreach ($fileDescriptor['zones'] as $regionRow => $regionInsee) {
                     if ($input->getArgument('type') == 'regionale' and $year <= 2013 and $year > 1998 and $regionRow == 24) continue; // Mayotte présent à partir de 2014 (warning bug file regionale/classe année 1998 format !!!)
-                    if ($input->getArgument('type') == 'departementale' and $year <= 2013 and $regionRow == 107) continue; // Mayotte présent à partir de 2014
+                    if ($input->getArgument('type') == 'departementale' and $year <= 2013 and $year > 1998 and $regionRow == 107) continue; // Mayotte présent à partir de 2014
                     if ($input->getArgument('type') == 'regionale' and $year < 1990 and $regionRow > 18) continue; // Pas de data pour les DOM avant 1990
                     if ($input->getArgument('type') == 'departementale' and $year < 1990 and $regionRow > 101) continue; // Pas de data pour les DOM avant 1990
 
