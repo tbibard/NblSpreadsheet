@@ -6,6 +6,11 @@ Ces données n'étaient pas intégrables en base de données sans un traitement 
 
 D'autres type d'imports pourraient être ajoutés.
 
+L'application utilise les composants suivant:
+- [symfony/console][2]
+- [symfony/dotenv][3]
+- [PHPOffice/PhpSpreadsheet][4]
+
 Installation
 ------------
 
@@ -46,9 +51,21 @@ $ ./console population:get-files
 Importer les données :
 ```
 $ ./console population:import all
+$ ./console population:import regionale --table=classe
+```
+
+Vérifier les données
+--------------------
+Vérifie si l'import s'est correctement effectué en comparant la somme totale des populations.
+```
+$ ./console population:check
+$ ./console population:check --table=regionale_classe
 ```
 
 Des options permettent d'importer uniquement certains fichiers.
 
 
 [1]: https://www.insee.fr/fr/statistiques/1893198
+[2]: https://symfony.com/doc/current/components/console.html
+[3]: https://symfony.com/doc/current/components/dotenv.html
+[4]: https://github.com/PHPOffice/PhpSpreadsheet

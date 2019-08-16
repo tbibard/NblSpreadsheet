@@ -15,7 +15,7 @@ use PhpOffice\PhpSpreadsheet\Spreadsheet;
 class CheckDataPopulationCommand extends Command
 {
     // the name of the command (the part after "bin/console")
-    protected static $defaultName = 'population:check-data';
+    protected static $defaultName = 'population:check';
     protected $tables = ['regionale_classe', 'regionale_quinquennal', 'departementale_classe', 'departementale_quinquennal'];
     protected $populationTotaux = [
         2019 => 66992699,
