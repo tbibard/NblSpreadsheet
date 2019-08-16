@@ -15,7 +15,7 @@ use PhpOffice\PhpSpreadsheet\Spreadsheet;
 class ImportPopulationCommand extends Command
 {
     // the name of the command (the part after "bin/console")
-    protected static $defaultName = 'spreadsheet:import-population';
+    protected static $defaultName = 'population:import';
     protected $input              = null;
     protected $output             = null;
     protected $fileDescriptor     = [];
