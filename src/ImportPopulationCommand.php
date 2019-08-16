@@ -16,7 +16,10 @@ class ImportPopulationCommand extends Command
 {
     // the name of the command (the part after "bin/console")
     protected static $defaultName = 'spreadsheet:import-population';
-    protected $fileDescriptor = [];
+    protected $input              = null;
+    protected $output             = null;
+    protected $fileDescriptor     = [];
+    protected $error              = false;
 
     public function __construct()
     {
@@ -32,8 +35,8 @@ class ImportPopulationCommand extends Command
             ->setDescription('Importation population régionale/départementale from xls file (insee)')
 
             // configure an argument
-            ->addArgument('type', InputArgument::REQUIRED, 'type population (regionale ou departementale)')
-            ->addOption('age', null, InputOption::VALUE_REQUIRED, 'Mode aggrégation des ages', 'classe')
+            ->addArgument('type', InputArgument::REQUIRED, 'type population (regionale, departementale ou all)')
+            ->addOption('age', null, InputOption::VALUE_REQUIRED, 'Mode aggrégation des ages', 'all')
 
             // the full command description shown when running the command with
             // the "--help" option
@@ -44,20 +47,44 @@ class ImportPopulationCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        // Check if argument type is a valid input
-        if (!in_array($input->getArgument('type'), ['regionale', 'departementale'])) {
+        $this->input  = $input;
+        $this->output = $output;
+
+        $requiredTypes = ['regionale', 'departementale'];
+        $requiredAges  = ['classe', 'quinquennal'];
+
+        // Check if argument 'type' is a valid
+        if (!in_array($input->getArgument('type'), $requiredTypes) and $input->getArgument('type') != 'all') {
             $output->writeln('<error>Le type saisi "'.$input->getArgument('type').'" n\'est pas une valeur reconnue ! (saisir regionale ou departementale) </error>');
             exit;
         }
 
-        // Check if option is valid
-        if (!in_array($input->getOption('age'), ['classe', 'quinquennal'])) {
+        // Check if option 'age' is valid
+        if ($input->hasOption('age') and !in_array($input->getOption('age'), $requiredAges) and $input->getOption('age') != 'all') {
             $output->writeln('<error>Option age "'.$input->getOption('age').'" n\'est pas une valeur reconnue ! (saisir classe ou quinquennal) </error>');
             exit;
         }
 
-        $filenameToImport = $input->getArgument('type').'-'.$input->getOption('age').'.xls';
-        $table = $input->getArgument('type').'_'.$input->getOption('age');
+        // Traitement 
+        foreach ($requiredTypes as $type) {
+            if ($input->getArgument('type') != 'all' and $input->getArgument('type') != $type) continue;
+
+            foreach ($requiredAges as $age) {
+                if ($input->getOption('age') != 'all' and $input->getOption('age') != $age) continue;
+
+                $this->process($type, $age);
+            }
+        }
+        if (!$this->error) {
+            $output->writeln('<info>Import terminé.</info>');
+        } else {
+            $output->writeln('<error>Import terminé (avec une ou des erreurs).</error>');
+        }
+    }
+
+    private function process(string $type, string $age) {
+        $filenameToImport = $type.'-'.$age.'.xls';
+        $table            = $type.'_'.$age;
 
         // Check if xls file is present for selected type
         if (!file_exists(__DIR__.'/../input/'.$filenameToImport)) {
@@ -70,12 +97,12 @@ class ImportPopulationCommand extends Command
         // Load xls file to a PhpSpreadsheet Object
         $spreadsheet = $reader->load(__DIR__.'/../input/'.$filenameToImport);
                 
-        $fileDescriptor = $this->getFileDescriptor($input->getArgument('type'), $input->getOption('age'));
+        $fileDescriptor = $this->getFileDescriptor($type, $age);
 
         ProgressBar::setFormatDefinition('custom', ' %current%/%max% [%bar%] %percent:3s%% (%message%) %elapsed:6s%/%estimated:-6s% %memory:6s%');
 
-        // creates a new progress bar (50 units)
-        $progressBar = new ProgressBar($output, $spreadsheet->getSheetCount());
+        // creates a new progress bar 
+        $progressBar = new ProgressBar($this->output, $spreadsheet->getSheetCount());
         $progressBar->setFormat('custom');
         // starts and displays the progress bar
         $progressBar->start();
@@ -95,12 +122,11 @@ class ImportPopulationCommand extends Command
             foreach ($sheetNames as $year) {
                 if ($year == 'À savoir') continue;
                 
-                $progressBar->setMessage('Importation année: '.$year);
+                $progressBar->setMessage('Import '.$filenameToImport.' année: '.$year);
                 $sheet = $spreadsheet->getSheetByName($year);
 
                 // Manage format xls
-                // 
-                if ($input->getArgument('type') == 'regionale' and $input->getOption('age') == 'quinquennal' and $year == 1998) {
+                if ($type == 'regionale' and $age == 'quinquennal' and $year == 1998) {
                     $fileDescriptor['zones'] = [
                         '6' => '84', '7' => '27', '8' => '53', '9' => '24', '10' => '94', '11' => '44',
                         '12' => '32', '13' => '11', '14' => '28', '15' => '75', '16' => '76', '17' => '52',
@@ -108,7 +134,7 @@ class ImportPopulationCommand extends Command
                     ];
                 }
 
-                if ($input->getArgument('type') == 'departementale' and $input->getOption('age') == 'quinquennal' and $year == 1998) {
+                if ($type == 'departementale' and $age == 'quinquennal' and $year == 1998) {
                     $fileDescriptor['zones'] = [
                         '6' => '01', '7' => '02', '8' => '03', '9' => '04', '10' => '05', '11' => '06', '12' => '07',
                         '13' => '08', '14' => '09', '15' => '10', '16' => '11', '17' => '12', '18' => '13', '19' => '14',
@@ -130,10 +156,10 @@ class ImportPopulationCommand extends Command
 
                 // Iterate row on regions
                 foreach ($fileDescriptor['zones'] as $regionRow => $regionInsee) {
-                    if ($input->getArgument('type') == 'regionale' and $year <= 2013 and $year > 1998 and $regionRow == 24) continue; // Mayotte présent à partir de 2014 (warning bug file regionale/classe année 1998 format !!!)
-                    if ($input->getArgument('type') == 'departementale' and $year <= 2013 and $year > 1998 and $regionRow == 107) continue; // Mayotte présent à partir de 2014
-                    if ($input->getArgument('type') == 'regionale' and $year < 1990 and $regionRow > 18) continue; // Pas de data pour les DOM avant 1990
-                    if ($input->getArgument('type') == 'departementale' and $year < 1990 and $regionRow > 101) continue; // Pas de data pour les DOM avant 1990
+                    if ($type == 'departementale' and $year <= 2013 and $year > 1998 and $regionRow == 107) continue; // Mayotte présent à partir de 2014
+                    if ($type == 'regionale' and $year <= 2013 and $year > 1998 and $regionRow == 24) continue; // Mayotte présent à partir de 2014 (warning bug file regionale/classe année 1998 format !!!)
+                    if ($type == 'regionale' and $year < 1990 and $regionRow > 18) continue; // Pas de data pour les DOM avant 1990
+                    if ($type == 'departementale' and $year < 1990 and $regionRow > 101) continue; // Pas de data pour les DOM avant 1990
 
                     // Iterate column for men (2) /age
                     foreach ($fileDescriptor['homme'] as $menColumn => $menAge) {
@@ -162,7 +188,8 @@ class ImportPopulationCommand extends Command
                 $progressBar->advance();
             }
         } catch (\PDOException $e) {
-            $output->writeln('<error>PDO : '.$e->getMessage().'</error>');
+            $this->output->writeln('<error>PDO : '.$e->getMessage().'</error>');
+            $this->error = true;
         } 
 
         // ensures that the progress bar is at 100%
@@ -175,7 +202,7 @@ class ImportPopulationCommand extends Command
 
         if ($type == 'regionale') {
             $fileDescriptor['zones'] = [
-                '6' => '84', '7' => '27', '8' => '53', '9' => '24', '10' => '94', '11' => '44',
+                '6'  => '84', '7'  => '27', '8'  => '53', '9'  => '24', '10' => '94', '11' => '44',
                 '12' => '32', '13' => '11', '14' => '28', '15' => '75', '16' => '76', '17' => '52',
                 '18' => '93', '20' => '01', '21' => '02', '22' => '03', '23' => '04', '24' => '06',
             ];

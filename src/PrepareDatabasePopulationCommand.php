@@ -29,7 +29,7 @@ class PrepareDatabasePopulationCommand extends Command
             ->setDescription('Préparation d\'une base de donnée locale en vue de l\'import des statistiques de population régionale/départementale de l\'Insee.')
 
             ->addOption('remove', null, InputOption::VALUE_REQUIRED, 'Supprime les tables et les recréé si existe', false)
-            ->addOption('table', null, InputOption::VALUE_REQUIRED, 'Supprime/Vide la table sélectionnée')
+            ->addOption('table', null, InputOption::VALUE_REQUIRED, 'Supprime/Vide la table sélectionnée', 'all')
             // the full command description shown when running the command with
             // the "--help" option
             ->setHelp('Cette commande vous permet de préparer votre base de données locale.');
@@ -44,18 +44,24 @@ class PrepareDatabasePopulationCommand extends Command
 
             // Check tables exists
             $requiredTables = ['departementale_classe', 'departementale_quinquennal', 'regionale_classe', 'regionale_quinquennal'];
+            // Check if option 'table' is valid
+            if ($input->hasOption('table') and !in_array($input->getOption('table'), $requiredTables) and $input->getOption('table') != 'all') {
+                $output->writeln('<error>Option table "'.$input->getOption('table').'" n\'est pas une valeur reconnue ! (saisir [regionale|departementale]_[classe|quinquennal]) </error>');
+                exit;
+            }
+            
             // Retrieve all tables in database
             if (substr($_ENV['DB_DSN'], 0, 5) == 'pgsql') {
-                $sql = "select table_name from information_schema.tables where table_schema='public'";
+                $sql = "SELECT table_name FROM information_schema.tables WHERE table_schema='public'";
             } else {
-                $sql = 'SHOW tables';
+                $sql = 'SHOW TABLES';
             }
             
             $sth = $this->dbh->prepare($sql);
             $sth->execute();
             $tables = $sth->fetchAll(\PDO::FETCH_COLUMN, 0);
             foreach ($requiredTables as $table) {
-                if ($input->hasOption('table') and $table != $input->getOption('table')) continue;
+                if ($input->hasOption('table') and $input->getOption('table') != 'all' and $table != $input->getOption('table')) continue;
 
                 if (!in_array($table, $tables)) {
                     // Build table
