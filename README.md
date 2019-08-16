@@ -26,7 +26,7 @@ Usage
 -----
 
 ```
-$ ./console
+$ bin/console
 ```
 
 Usage pour import Population
@@ -38,28 +38,28 @@ Afin d'importer les estimations de populations:
 
 Créer le schéma dans votre bdd:
 ```
-$ ./console population:prepare-database all
+$ bin/console population:prepare-database all
 ```
 
 Des options permettent de re-créé le schéma ou de vider les tables.
 
 Récupérer les fichiers :
 ```
-$ ./console population:get-files
+$ bin/console population:get-files
 ```
 
 Importer les données :
 ```
-$ ./console population:import all
-$ ./console population:import regionale --table=classe
+$ bin/console population:import all
+$ bin/console population:import regionale --table=classe
 ```
 
 Vérifier les données
 --------------------
 Vérifie si l'import s'est correctement effectué en comparant la somme totale des populations.
 ```
-$ ./console population:check
-$ ./console population:check --table=regionale_classe
+$ bin/console population:check
+$ bin/console population:check --table=regionale_classe
 ```
 
 Des options permettent d'importer uniquement certains fichiers.
