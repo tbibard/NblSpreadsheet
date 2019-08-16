@@ -12,7 +12,7 @@ use Symfony\Component\Dotenv\Dotenv;
 class PrepareDatabasePopulationCommand extends Command
 {
     // the name of the command (the part after "bin/console")
-    protected static $defaultName = 'spreadsheet:prepare-database-population';
+    protected static $defaultName = 'population:prepare-database';
     protected $dbh = null;
 
     public function __construct()

@@ -14,7 +14,7 @@ use PhpOffice\PhpSpreadsheet\Spreadsheet;
 class GetFilesPopulationCommand extends Command
 {
     // the name of the command (the part after "bin/console")
-    protected static $defaultName = 'spreadsheet:getfiles-population';
+    protected static $defaultName = 'population:getfiles';
 
     protected $files = [
         'departementale-classe' => 'https://www.insee.fr/fr/statistiques/fichier/1893198/estim-pop-dep-sexe-gca-1975-2019.xls',
